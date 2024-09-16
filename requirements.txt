@@ -6,3 +6,4 @@ sentence-transformers
 bump2version
 jupyter
 datasets
+pandas
