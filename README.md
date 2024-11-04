@@ -51,6 +51,19 @@ predicted_label = embeddings_classifier.predict(text)
 
 ```
 
+### LLM Based Classification
+Using LLM for classification is a viable option that sometimes provides the highest quality.
+Currently we have implemented Open AI based LLMs.
+
+```python
+from open_intent_classifier.model import OpenAiIntentClassifier
+labels = ["Cancel Subscription", "Refund Requests", "Broken Item", "And More..."]
+text = "I don't want to continue this subscription"
+model_name = "gpt-4o-mini"
+classifier = OpenAiIntentClassifier(model_name)
+result = classifier.predict(text=text, labels=labels)
+```
+
 
 ## Training the T5 base classifier 
 The details of training of the classifier is in another repository. I have separated training from inference in order to allow each repository to be focused and extended.
@@ -59,6 +72,9 @@ You can read about the training in the training repo: https://github.com/SerjSmo
 
 # Roadmap
 
-- [ ] Add LLM based classification
+- [x] Add LLM based classification
+- [ ] Add embeddings filtering stage for classifiers
+- [ ] Add small language models as classifiers
+- [ ] Add multithreading for LLM based classifiers
 - [ ] Add an option to ensemble embeddings and T5 (and additional models)
 - [ ] Create a recommender for fine-tuning
