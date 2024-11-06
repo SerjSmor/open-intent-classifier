@@ -15,7 +15,7 @@ setup(
     description="This library has two purposes: 1. allow to easily test semantic classification with open labels (not pre defined) for intent recognition. "
                 "2. allow to experiment with different n-shot classification components.",
     install_requires=["transformers", "torch", "sentencepiece", "scikit-learn", "sentence-transformers", "pandas",
-                      "python-dotenv", "openai"],
+                      "python-dotenv", "openai", "dspy"],
     long_description=long_description,
     long_description_content_type='text/markdown'
 )
