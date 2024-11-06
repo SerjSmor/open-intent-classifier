@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import List
 import logging
 
+import dspy
 from transformers import T5ForConditionalGeneration, T5Tokenizer
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -11,6 +12,8 @@ from open_intent_classifier.consts import INTENT_CLASSIFIER_80M_FLAN_T5_SMALL, D
     PROMPT_TEMPLATE, OPENAI_PROMPT_TEMPLATE
 
 from open_intent_classifier.utils import join_labels
+
+GPT_4O_MINI = 'gpt-4o-mini'
 
 TEXT_PLACEHOLDER = "{text}"
 LABELS_PLACEHOLDER = "{labels}"
@@ -28,6 +31,32 @@ class ClassificationResult:
 class Classifier:
     def predict(self, text: str, labels: List[str], **kwargs) -> ClassificationResult:
         raise NotImplementedError()
+
+
+class Classification(dspy.Signature):
+    """Classify the customer message into one of the intent labels.
+    The output should be only the predicted class as a single intent label."""
+
+    customer_message = dspy.InputField(desc="Customer message during customer service interaction")
+    intent_labels = dspy.InputField(desc="Labels that represent customer intent")
+    intent_class = dspy.OutputField(desc="a label best matching customer's intent ")
+
+
+class DSPyClassifier(dspy.Module, Classifier):
+    def __init__(self, model_name=GPT_4O_MINI):
+        super().__init__()
+        self.generate_answer = dspy.ChainOfThought(Classification)
+        lm = dspy.OpenAI(model=model_name)
+        dspy.settings.configure(lm=lm)
+
+    def forward(self, customer_message: str, labels: str):
+        return self.generate_answer(customer_message=customer_message, labels=labels)
+
+    def predict(self, text: str, labels: List[str], **kwargs) -> ClassificationResult:
+        labels = join_labels(labels)
+        pred = self.forward(customer_message=text, labels=labels)
+        return ClassificationResult(pred.intent_class, pred.rationale)
+
 
 class OpenAiIntentClassifier(Classifier):
     def __init__(self, model_name: str, openai_api_key: str = ""):
@@ -84,4 +113,5 @@ class IntentClassifier:
         logger.debug(f"Full prompt: {prompt}")
         logger.debug(f"Decoded output: {decoded_output}")
         return ClassificationResult(class_name=decoded_output, reasoning="")
+
 
