@@ -64,6 +64,18 @@ classifier = OpenAiIntentClassifier(model_name)
 result = classifier.predict(text=text, labels=labels)
 ```
 
+### DSPy based classification
+Here's an example of using DSPy based classifier for both educational purposes and potential increase in quality.
+```python
+from open_intent_classifier.model import DSPyClassifier
+classifier = DSPyClassifier()
+labels = ["Cancel subscription", "Refund request"]
+text = "I want to cancel my subscription"
+result = classifier.predict(text, labels)
+```
+
+        
+
 
 ## Training the T5 base classifier 
 The details of training of the classifier is in another repository. I have separated training from inference in order to allow each repository to be focused and extended.
@@ -73,6 +85,7 @@ You can read about the training in the training repo: https://github.com/SerjSmo
 # Roadmap
 
 - [x] Add LLM based classification
+- [x] Add DSPy based classification
 - [ ] Add embeddings filtering stage for classifiers
 - [ ] Add small language models as classifiers
 - [ ] Add multithreading for LLM based classifiers
