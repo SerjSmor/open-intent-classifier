@@ -17,6 +17,8 @@ The goal of this library is to enable you test your assumptions about your data 
 > 1. Expect API changes
 > 2. Milage may vary. Quality of classifiers have been tested on Atis and Banking77
 
+## Installation
+`$ pip install open-intent-classifier`
 
 ## Usage
 A full example is under [Atis Notebook](https://github.com/SerjSmor/open-intent-classifier/blob/main/notebooks/atis_example.ipynb)
