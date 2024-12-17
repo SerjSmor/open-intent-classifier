@@ -76,6 +76,15 @@ text = "I want to cancel my subscription"
 result = classifier.predict(text, labels)
 ```
 
+### SmolLM2 based classification
+Here's an example of using SmolLM2 based classifier
+```python
+from open_intent_classifier.model import SmolLm2Classifier
+classifier = SmolLm2Classifier()
+labels = ["Cancel subscription", "Refund request"]
+text = "I want to cancel my subscription"
+result = classifier.predict(text, labels)
+```
         
 
 
@@ -88,8 +97,9 @@ You can read about the training in the training repo: https://github.com/SerjSmo
 
 - [x] Add LLM based classification
 - [x] Add DSPy based classification
+- [x] Add small language models as classifiers
+- [x] Add few shot interface
 - [ ] Add embeddings filtering stage for classifiers
-- [ ] Add small language models as classifiers
 - [ ] Add multithreading for LLM based classifiers
 - [ ] Add an option to ensemble embeddings and T5 (and additional models)
 - [ ] Create a recommender for fine-tuning
