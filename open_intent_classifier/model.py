@@ -4,14 +4,16 @@ from typing import List
 import logging
 
 import dspy
-from transformers import T5ForConditionalGeneration, T5Tokenizer
+from transformers import T5ForConditionalGeneration, T5Tokenizer, AutoTokenizer, AutoModelForCausalLM
 from openai import OpenAI
 from dotenv import load_dotenv
 
 from open_intent_classifier.consts import INTENT_CLASSIFIER_80M_FLAN_T5_SMALL, DEFAULT_MAX_LENGTH, DEFAULT_TRUNCATION, \
-    PROMPT_TEMPLATE, OPENAI_PROMPT_TEMPLATE
+    PROMPT_TEMPLATE, OPENAI_PROMPT_TEMPLATE, SMOLLM2_1_7B, SMOLLM2_PROMPT_TEMPLATE
 
 from open_intent_classifier.utils import join_labels
+
+CUDA = "cuda"
 
 GPT_4O_MINI = 'gpt-4o-mini'
 
@@ -22,10 +24,35 @@ LABELS_PLACEHOLDER = "{labels}"
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(name)s - %(levelname)s - %(message)s')
 
+
 @dataclass
 class ClassificationResult:
     class_name: str
     reasoning: str
+
+
+@dataclass
+class ClassificationExample:
+    text: str
+    intent: str
+    intent_labels_str: str
+
+    def __str__(self):
+        return f'''
+            -----
+            Example
+            Text: {self.text}
+            Intents list: {self.intent_labels_str}
+            Answer: {self.intent}
+            -----
+        '''
+
+
+DEFAULT_EXAMPLE = ClassificationExample(
+    text="I want to cancel subscription",
+    intent="Cancel Subscription",
+    intent_labels_str="Refund Request%Delivery Late%Cancel Subscription"
+)
 
 
 class Classifier:
@@ -66,8 +93,6 @@ class OpenAiIntentClassifier(Classifier):
         self.client = OpenAI(api_key=openai_api_key)
         self.model_name = model_name
 
-
-
     def predict(self, text: str, labels: List[str], **kwargs) -> ClassificationResult:
         joined_labels = join_labels(labels)
         prompt = OPENAI_PROMPT_TEMPLATE.replace(LABELS_PLACEHOLDER, joined_labels).replace(TEXT_PLACEHOLDER, text)
@@ -83,15 +108,17 @@ class OpenAiIntentClassifier(Classifier):
         response_dict = eval(completion.choices[0].message.content)
         return ClassificationResult(response_dict["class_name"], response_dict["reasoning"])
 
+
 class IntentClassifier:
-    def __init__(self, model_name: str = INTENT_CLASSIFIER_80M_FLAN_T5_SMALL, device: str = None, verbose=False):
+    def __init__(self, model_name: str = INTENT_CLASSIFIER_80M_FLAN_T5_SMALL, device: str = None,
+                 verbose: bool = False):
         self.model = T5ForConditionalGeneration.from_pretrained(model_name).to(device)
         self.tokenizer = T5Tokenizer.from_pretrained(model_name)
         self.device = device
         if verbose:
             logger.setLevel(logging.DEBUG)
 
-    def _build_prompt(self, text: str, labels: List[str], prompt_template=PROMPT_TEMPLATE):
+    def _build_prompt(self, text: str, labels: List[str], prompt_template: str = PROMPT_TEMPLATE):
         prompt_options = join_labels(labels)
 
         # first replace {labels} this way we know that {text} can't be misused with tokens that can overlap with {text}
@@ -113,5 +140,47 @@ class IntentClassifier:
         logger.debug(f"Full prompt: {prompt}")
         logger.debug(f"Decoded output: {decoded_output}")
         return ClassificationResult(class_name=decoded_output, reasoning="")
+
+
+class SmolLm2Classifier(Classifier):
+    def __init__(self, model_name: str = SMOLLM2_1_7B, device: str = CUDA, verbose: bool = False,
+                 few_shot_examples: List[ClassificationExample] = None):
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
+        self.tokenizer = tokenizer
+        self.model = model
+        self.device = device
+        self.verbose = verbose
+        self.few_shot_examples = [] if few_shot_examples is None else few_shot_examples
+
+    def predict(self, text: str, labels: List[str], **kwargs) -> ClassificationResult:
+        labels_str = "%".join(labels)
+
+        few_shot_examples: List[ClassificationExample] = kwargs.get("few_shot_examples", [])
+        if len(few_shot_examples) == 0:
+            few_shot_examples.append(DEFAULT_EXAMPLE)
+        examples_str = ""
+        for example in few_shot_examples:
+            examples_str += str(example)
+
+        prompt = SMOLLM2_PROMPT_TEMPLATE.replace("{text}", text).replace("{labels}", labels_str).replace("{examples}", examples_str)
+        if self.verbose:
+            logger.info(prompt)
+
+        messages = [{"role": "system",
+                     "content": "You are a customer service expert. Your goal is to predict what is the intent of the user from a predfined list"},
+                    {"role": "user", "content": prompt}]
+
+        input_text = self.tokenizer.apply_chat_template(messages, tokenize=False)
+
+        inputs = self.tokenizer.encode(input_text, return_tensors="pt").to(self.device)
+        outputs = self.model.generate(inputs, max_new_tokens=350)
+        output = self.tokenizer.decode(outputs[0][len(inputs[0]):], skip_special_tokens=True)
+
+        if self.verbose:
+            logger.info(output)
+
+        last_answer_occurrence = output.rsplit("Answer: ", 2)[-1]
+        return ClassificationResult(last_answer_occurrence, "")
 
 
