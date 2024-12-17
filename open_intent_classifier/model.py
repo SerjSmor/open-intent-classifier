@@ -19,6 +19,7 @@ GPT_4O_MINI = 'gpt-4o-mini'
 
 TEXT_PLACEHOLDER = "{text}"
 LABELS_PLACEHOLDER = "{labels}"
+EXAMPLES_PLACEHOLDER = "{examples}"
 
 # Create a logger with the filename
 logger = logging.getLogger(__name__)
@@ -86,16 +87,25 @@ class DSPyClassifier(dspy.Module, Classifier):
 
 
 class OpenAiIntentClassifier(Classifier):
-    def __init__(self, model_name: str, openai_api_key: str = ""):
+    def __init__(self, model_name: str, openai_api_key: str = "", few_shot_examples: List[ClassificationExample] = None):
         if not openai_api_key:
             load_dotenv()
             openai_api_key = os.getenv("OPENAI_API_KEY")
         self.client = OpenAI(api_key=openai_api_key)
         self.model_name = model_name
+        self.few_shot_examples = [] if few_shot_examples is None else []
 
     def predict(self, text: str, labels: List[str], **kwargs) -> ClassificationResult:
         joined_labels = join_labels(labels)
-        prompt = OPENAI_PROMPT_TEMPLATE.replace(LABELS_PLACEHOLDER, joined_labels).replace(TEXT_PLACEHOLDER, text)
+
+        if len(self.few_shot_examples) == 0:
+            self.few_shot_examples.append(DEFAULT_EXAMPLE)
+        examples_str = ""
+        for example in self.few_shot_examples:
+            examples_str += str(example)
+
+        prompt = OPENAI_PROMPT_TEMPLATE.replace(LABELS_PLACEHOLDER, joined_labels).replace(TEXT_PLACEHOLDER, text).\
+            replace(EXAMPLES_PLACEHOLDER, examples_str)
 
         completion = self.client.chat.completions.create(
             model=self.model_name,
@@ -156,11 +166,10 @@ class SmolLm2Classifier(Classifier):
     def predict(self, text: str, labels: List[str], **kwargs) -> ClassificationResult:
         labels_str = "%".join(labels)
 
-        few_shot_examples: List[ClassificationExample] = kwargs.get("few_shot_examples", [])
-        if len(few_shot_examples) == 0:
-            few_shot_examples.append(DEFAULT_EXAMPLE)
+        if len(self.few_shot_examples) == 0:
+            self.few_shot_examples.append(DEFAULT_EXAMPLE)
         examples_str = ""
-        for example in few_shot_examples:
+        for example in self.few_shot_examples:
             examples_str += str(example)
 
         prompt = SMOLLM2_PROMPT_TEMPLATE.replace("{text}", text).replace("{labels}", labels_str).replace("{examples}", examples_str)

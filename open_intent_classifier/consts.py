@@ -2,7 +2,11 @@ PROMPT_TEMPLATE = "Topic %% Customer: {text}.\nEND MESSAGE\nChoose one topic tha
 
 OPENAI_PROMPT_TEMPLATE = ''' 
     You are an expert in customer service domain. You need to classify a customer message into one of
-    the following classes: {labels} % Customer message: {text} % Please return json object with the following structure: {'{class_name: '', reasoning: ''}'} class name should not contain a number.
+    the following classes: {labels} 
+    Please return json object with the following structure: {'{class_name: '', reasoning: ''}'} class name should not contain a number.
+    {examples}
+    Customer message: {text} %
+    Answer: .
 '''
 
 SMOLLM2_PROMPT_TEMPLATE = '''Input format: 
