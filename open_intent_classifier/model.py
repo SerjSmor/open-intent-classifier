@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from open_intent_classifier.consts import INTENT_CLASSIFIER_80M_FLAN_T5_SMALL, DEFAULT_MAX_LENGTH, DEFAULT_TRUNCATION, \
     PROMPT_TEMPLATE, OPENAI_PROMPT_TEMPLATE, SMOLLM2_1_7B, SMOLLM2_PROMPT_TEMPLATE
 
-from open_intent_classifier.utils import join_labels
+from open_intent_classifier.utils import join_labels, labels_to_str
 
 CUDA = "cuda"
 
@@ -36,14 +36,14 @@ class ClassificationResult:
 class ClassificationExample:
     text: str
     intent: str
-    intent_labels_str: str
+    intent_labels: List[str]
 
     def __str__(self):
         return f'''
             -----
             Example
             Text: {self.text}
-            Intents list: {self.intent_labels_str}
+            Intents list: {labels_to_str(self.intent_labels)}
             Answer: {self.intent}
             -----
         '''
@@ -52,7 +52,7 @@ class ClassificationExample:
 DEFAULT_EXAMPLE = ClassificationExample(
     text="I want to cancel subscription",
     intent="Cancel Subscription",
-    intent_labels_str="Refund Request%Delivery Late%Cancel Subscription"
+    intent_labels=["Refund Request", "Delivery Late", "Cancel Subscription"]
 )
 
 
@@ -172,7 +172,7 @@ class SmolLm2Classifier(Classifier):
         for example in self.few_shot_examples:
             examples_str += str(example)
 
-        prompt = SMOLLM2_PROMPT_TEMPLATE.replace("{text}", text).replace("{labels}", labels_str).replace("{examples}", examples_str)
+        prompt = SMOLLM2_PROMPT_TEMPLATE.replace(TEXT_PLACEHOLDER, text).replace(LABELS_PLACEHOLDER, labels_str).replace(EXAMPLES_PLACEHOLDER, examples_str)
         if self.verbose:
             logger.info(prompt)
 

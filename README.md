@@ -55,7 +55,7 @@ predicted_label = embeddings_classifier.predict(text)
 
 ### LLM Based Classification
 Using LLM for classification is a viable option that sometimes provides the highest quality.
-Currently we have implemented Open AI based LLMs.
+Currently we have implemented only Open AI based LLMs.
 
 ```python
 from open_intent_classifier.model import OpenAiIntentClassifier
@@ -63,6 +63,17 @@ labels = ["Cancel Subscription", "Refund Requests", "Broken Item", "And More..."
 text = "I don't want to continue this subscription"
 model_name = "gpt-4o-mini"
 classifier = OpenAiIntentClassifier(model_name)
+result = classifier.predict(text=text, labels=labels)
+```
+
+### LLM Few Shot Based Classification
+```python
+from open_intent_classifier.model import OpenAiIntentClassifier, ClassificationExample
+labels = ["Cancel Subscription", "Refund Requests", "Broken Item", "And More..."]
+text = "I don't want to continue this subscription"
+model_name = "gpt-4o-mini"
+example = ClassificationExample(text="I want to abort my account", intent_labels=labels, intent="Cancel Subscription") 
+classifier = OpenAiIntentClassifier(model_name, few_shot_examples=[example])
 result = classifier.predict(text=text, labels=labels)
 ```
 
@@ -85,7 +96,17 @@ labels = ["Cancel subscription", "Refund request"]
 text = "I want to cancel my subscription"
 result = classifier.predict(text, labels)
 ```
-        
+
+### SmolLM2 Few Shot Based Classification
+from open_intent_classifier.model import SmolLm2Classifier
+```python
+from open_intent_classifier.model import SmolLm2Classifier, ClassificationExample
+labels = ["Cancel subscription", "Refund request"]
+example = ClassificationExample(text="I want to abort my account", intent_labels=labels, intent="Cancel Subscription")
+classifier = SmolLm2Classifier(few_shot_examples=[example])
+text = "I want to cancel my subscription"
+result = classifier.predict(text, labels)
+```        
 
 
 ## Training the T5 base classifier 
@@ -99,6 +120,7 @@ You can read about the training in the training repo: https://github.com/SerjSmo
 - [x] Add DSPy based classification
 - [x] Add small language models as classifiers
 - [x] Add few shot interface
+- [ ] Add Atis and Banking77 comparisons with all classifiers
 - [ ] Add embeddings filtering stage for classifiers
 - [ ] Add multithreading for LLM based classifiers
 - [ ] Add an option to ensemble embeddings and T5 (and additional models)

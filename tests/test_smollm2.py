@@ -17,12 +17,10 @@ class TestSmolLm2(unittest.TestCase):
         labels = ["Order flight ticket", "Abbrevations", "Fare code", "Cheap price", "Meals questions", "Seating questions"]
         text = "I want to get a flight ticket to NYC asap"
 
+        example_flight = ClassificationExample("Do you have an open ticket to a flight to Chicago?",
+                                               "Order flight ticket", labels)
 
-        example_flight = ClassificationExample("Do you have an open ticket to a flight to Chicago?", "Order flight ticket",
-                                        "%".join(labels))
-
-        example_price = ClassificationExample("What is the cheapest route to London?", "Price questions",
-                                        "%".join(labels))
+        example_price = ClassificationExample("What is the cheapest route to London?", "Price questions", labels)
 
         c = SmolLm2Classifier(verbose=True, few_shot_examples=[example_flight, example_price])
 
@@ -36,10 +34,9 @@ class TestSmolLm2(unittest.TestCase):
 
         c = SmolLm2Classifier(verbose=True)
         example_flight = ClassificationExample("Do you have an open ticket to a flight to Chicago?", "flight ticket",
-                                        "%".join(labels))
+                                               labels)
 
-        example_price = ClassificationExample("What is the price for a flight to London?", "price",
-                                        "%".join(labels))
+        example_price = ClassificationExample("What is the price for a flight to London?", "price", labels)
 
         result = c.predict(text, labels, few_shot_examples=[example_flight, example_price])
         self.assertEquals("flight ticket".lower(), result.class_name.lower())
